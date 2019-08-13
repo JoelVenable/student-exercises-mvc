@@ -1,0 +1,47 @@
+﻿@model StudentExercises.Models.ViewModels.StudentInstructorViewModel
+
+@{
+    ViewData["Title"] = "Students &amp; Instructors";
+}
+
+<h2>@ViewData["Title"]</h2>
+
+<h4>Students</h4>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th> Student Name </th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var student in Model.Students)
+        {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => student.FullName)
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<h4>Instructors</h4>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th> Instructor Name </th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var instructor in Model.Instructors)
+        {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => instructor.FullName)
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
