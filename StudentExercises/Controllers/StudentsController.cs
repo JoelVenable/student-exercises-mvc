@@ -108,7 +108,17 @@ namespace StudentExercises.Controllers
         // GET: Students/Edit/5
         public async Task<IActionResult> Edit(int id)
         {
-            return View(await GetOneStudent(id));
+            var studentCreateModel = new StudentCreateViewModel();
+
+            List<Task> tasks = new List<Task>()
+            {
+                Task.Run(async () => studentCreateModel.Student = await GetOneStudent(id)),
+                Task.Run(async () => studentCreateModel.Cohorts = RenderSelectOptions(await GetAllCohorts()))
+                
+            };
+
+            await Task.WhenAll(tasks);
+            return View(studentCreateModel);
         }
 
         // POST: Students/Edit/5
