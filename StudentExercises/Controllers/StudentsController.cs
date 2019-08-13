@@ -83,7 +83,7 @@ namespace StudentExercises.Controllers
         {
             var createStudent = new StudentCreateViewModel();
             createStudent.Student = new Student();
-            createStudent.Cohorts = RenderSelectOptions(await GetAllCohorts()); 
+            createStudent.Cohorts = RenderSelectOptions(await GetAllCohorts());
 
             return View(createStudent);
         }
@@ -108,50 +108,59 @@ namespace StudentExercises.Controllers
         // GET: Students/Edit/5
         public async Task<IActionResult> Edit(int id)
         {
-            var studentCreateModel = new StudentCreateViewModel();
-
-            List<Task> tasks = new List<Task>()
+            if (await StudentExists(id))
             {
-                Task.Run(async () => studentCreateModel.Student = await GetOneStudent(id)),
-                Task.Run(async () => studentCreateModel.Cohorts = RenderSelectOptions(await GetAllCohorts()))
-                
-            };
+                var studentCreateModel = new StudentCreateViewModel();
 
-            await Task.WhenAll(tasks);
-            return View(studentCreateModel);
+                List<Task> tasks = new List<Task>()
+                {
+                    Task.Run(async () => studentCreateModel.Student = await GetOneStudent(id)),
+                    Task.Run(async () => studentCreateModel.Cohorts = RenderSelectOptions(await GetAllCohorts()))
+                };
+
+                await Task.WhenAll(tasks);
+                return View(studentCreateModel);
+            }
+            else return View();
+
         }
 
         // POST: Students/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Edit(int id, IFormCollection collection)
+        public async Task<IActionResult> Edit(Student student)
         {
             try
             {
-                // TODO: Add update logic here
+
+                await PutStudent(student);
 
                 return RedirectToAction(nameof(Index));
             }
             catch
             {
-                return View();
+                return View(student);
             }
         }
 
         // GET: Students/Delete/5
-        public ActionResult Delete(int id)
+        public async Task<IActionResult> Delete(int id)
         {
-            return View();
+
+            return View(await GetOneStudent(id));
         }
 
         // POST: Students/Delete/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Delete(int id, IFormCollection collection)
+        public async Task<IActionResult> Delete(int id, IFormCollection collection)
         {
             try
             {
-                // TODO: Add delete logic here
+                if (await StudentExists(id))
+                {
+                    await DeleteStudent(id);
+                }
 
                 return RedirectToAction(nameof(Index));
             }
@@ -172,6 +181,32 @@ namespace StudentExercises.Controllers
                     cmd.CommandText = @"
                         INSERT INTO Student (FirstName, LastName, SlackHandle, CohortId)
                         VALUES (@firstName, @lastName, @slackHandle, @cohortId)
+";
+                    cmd.Parameters.AddWithValue("@firstName", student.FirstName);
+                    cmd.Parameters.AddWithValue("@lastName", student.LastName);
+                    cmd.Parameters.AddWithValue("@slackHandle", student.SlackHandle);
+                    cmd.Parameters.AddWithValue("@cohortId", student.CohortId);
+
+                    await cmd.ExecuteNonQueryAsync();
+
+                }
+            }
+        }
+
+        private async Task PutStudent(Student student)
+        {
+            using (SqlConnection conn = Connection)
+            {
+                await conn.OpenAsync();
+                using (SqlCommand cmd = conn.CreateCommand())
+                {
+                    cmd.CommandText = @"
+                            UPDATE Student
+                            SET FirstName = @firstName,
+                                LastName = @lastName,
+                                SlackHandle = @slackHandle,
+                                CohortId = @cohortId
+                            WHERE Id = @id
 ";
                     cmd.Parameters.AddWithValue("@firstName", student.FirstName);
                     cmd.Parameters.AddWithValue("@lastName", student.LastName);
@@ -228,6 +263,23 @@ namespace StudentExercises.Controllers
             return student;
         }
 
+        private async Task DeleteStudent(int id)
+        {
+
+            using (SqlConnection conn = Connection)
+            {
+                await conn.OpenAsync();
+                using (SqlCommand cmd = conn.CreateCommand())
+                {
+                    cmd.CommandText = "DELETE FROM Student WHERE Id = @id";
+                    cmd.Parameters.Add(new SqlParameter("@id", id));
+                    int rowsAffected = await cmd.ExecuteNonQueryAsync();
+                    if (rowsAffected == 0)
+                        throw new Exception("No rows affected");
+                }
+            }
+        }
+
 
         private async Task<List<Cohort>> GetAllCohorts()
         {
@@ -278,6 +330,23 @@ namespace StudentExercises.Controllers
         }
 
 
-        
+        private async Task<bool> StudentExists(int id)
+        {
+            using (SqlConnection conn = Connection)
+            {
+                await conn.OpenAsync();
+                using (SqlCommand cmd = conn.CreateCommand())
+                {
+                    cmd.CommandText = "SELECT Id FROM Student WHERE Id = @id";
+                    cmd.Parameters.Add(new SqlParameter("@id", id));
+
+                    SqlDataReader reader = cmd.ExecuteReader();
+
+                    return await reader.ReadAsync();
+                }
+            }
+        }
+
+
     }
 }
