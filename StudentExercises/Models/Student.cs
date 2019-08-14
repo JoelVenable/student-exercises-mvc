@@ -7,5 +7,7 @@ namespace StudentExercises.Models
 {
     public class Student : BasePerson
     {
+
+        public List<Exercise> Exercises { get; set; }
     }
 }

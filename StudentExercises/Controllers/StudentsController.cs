@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
+using System.Data.SqlTypes;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
@@ -232,30 +233,41 @@ namespace StudentExercises.Controllers
                 using (SqlCommand cmd = conn.CreateCommand())
                 {
                     cmd.CommandText = @"SELECT 
-                    s.Id, s.FirstName, s.LastName, s.SlackHandle, s.CohortId, c.[Name]
+                    s.Id, s.FirstName, s.LastName, s.SlackHandle, s.CohortId, 
+                    c.[Name], e.[Name] AS ExerciseName, e.[Language]
                     FROM Student s
                     LEFT JOIN Cohort c on s.CohortId = c.Id
+                    LEFT JOIN StudentExercise se on s.Id = se.StudentId
+                    LEFT JOIN Exercise e on se.ExerciseId = e.Id
                     WHERE s.Id = @Id";
 
                     cmd.Parameters.Add(new SqlParameter("Id", id));
 
                     SqlDataReader reader = cmd.ExecuteReader();
 
-
+                    
                     while (await reader.ReadAsync())
                     {
-                        student = new Student()
+                        if (student == null)
                         {
-                            Id = reader.GetInt32(reader.GetOrdinal("Id")),
-                            FirstName = reader.GetString(reader.GetOrdinal("FirstName")),
-                            LastName = reader.GetString(reader.GetOrdinal("LastName")),
-                            SlackHandle = reader.GetString(reader.GetOrdinal("SlackHandle")),
-                            CohortId = reader.GetInt32(reader.GetOrdinal("CohortId")),
-                            Cohort = new Cohort()
+                            student = new Student()
                             {
-                                Name = reader.GetString(reader.GetOrdinal("Name"))
-                            }
-                        };
+                                Id = reader.GetInt32(reader.GetOrdinal("Id")),
+                                FirstName = reader.GetString(reader.GetOrdinal("FirstName")),
+                                LastName = reader.GetString(reader.GetOrdinal("LastName")),
+                                SlackHandle = reader.GetString(reader.GetOrdinal("SlackHandle")),
+                                CohortId = reader.GetInt32(reader.GetOrdinal("CohortId")),
+                                Exercises = new List<Exercise>(),
+                                Cohort = new Cohort()
+                                {
+                                    Name = reader.GetString(reader.GetOrdinal("Name"))
+                                }
+                            };
+                        }
+                        var exercise = ParseExercise(reader);
+
+                        if (exercise != null) student.Exercises.Add(exercise);
+                        
                     }
                     reader.Close();
 
@@ -312,7 +324,7 @@ namespace StudentExercises.Controllers
         }
 
 
-        public List<SelectListItem> RenderSelectOptions(List<Cohort> cohorts)
+        private List<SelectListItem> RenderSelectOptions(List<Cohort> cohorts)
         {
             var options = new List<SelectListItem>();
             options.Insert(0, new SelectListItem
@@ -330,6 +342,23 @@ namespace StudentExercises.Controllers
             });
 
             return options;
+        }
+
+        private Exercise ParseExercise(SqlDataReader reader)
+        {
+            try
+            {
+                return new Exercise()
+                {
+                    Name = reader.GetString(reader.GetOrdinal("ExerciseName")),
+                    Language = reader.GetString(reader.GetOrdinal("Language"))
+
+                };
+            }
+            catch (SqlNullValueException)
+            {
+                return null;
+            }
         }
 
 

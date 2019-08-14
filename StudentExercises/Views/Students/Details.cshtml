@@ -36,6 +36,26 @@
         </dd>
     </dl>
 </div>
+<table class="table">
+    <thead>
+        <tr>
+            <th> Assigned Exercises </th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var exercise in Model.Exercises)
+        {
+        <tr>
+            <td>
+                @Html.DisplayFor(modelItem => exercise.Name)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => exercise.Language)
+            </td>
+        </tr>
+        }
+    </tbody>
+</table>
 <div>
     @Html.ActionLink("Edit", "Edit", new { /* id = Model.PrimaryKey */ }) |
     <a asp-action="Index">Back to List</a>
