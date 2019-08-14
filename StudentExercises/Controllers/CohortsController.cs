@@ -68,19 +68,19 @@ namespace StudentExercises.Controllers
         }
 
         // GET: Cohorts/Edit/5
-        public ActionResult Edit(int id)
+        public async Task<IActionResult> Edit(int id)
         {
-            return View();
+            return View(await GetOneCohort(id));
         }
 
         // POST: Cohorts/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Edit(int id, IFormCollection collection)
+        public async Task<IActionResult> Edit(int id, Cohort cohort)
         {
             try
             {
-                // TODO: Add update logic here
+                await PutCohort(cohort);
 
                 return RedirectToAction(nameof(Index));
             }
@@ -91,19 +91,21 @@ namespace StudentExercises.Controllers
         }
 
         // GET: Cohorts/Delete/5
-        public ActionResult Delete(int id)
+        public async Task<IActionResult> Delete(int id)
         {
-            return View();
+            return View(await GetOneCohort(id));
         }
 
         // POST: Cohorts/Delete/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Delete(int id, IFormCollection collection)
+        public async Task<IActionResult> Delete(Cohort cohort)
         {
             try
             {
                 // TODO: Add delete logic here
+
+                await DeleteCohort(cohort.Id);
 
                 return RedirectToAction(nameof(Index));
             }
@@ -122,7 +124,7 @@ namespace StudentExercises.Controllers
                 using (SqlCommand cmd = conn.CreateCommand())
                 {
                     cmd.CommandText = @"
-                    SELECT c.Id, c.Name, 
+                    SELECT c.Id, c.[Name], 
                         s.Id AS StudentId, 
                         s.FirstName AS StudentFirstName, 
                         s.LastName AS StudentLastName, 
@@ -180,7 +182,7 @@ namespace StudentExercises.Controllers
                 using (SqlCommand cmd = conn.CreateCommand())
                 {
                     cmd.CommandText = @"
-                    SELECT c.Id, c.Name, 
+                    SELECT c.Id, c.[Name], 
                         s.Id AS StudentId, 
                         s.FirstName AS StudentFirstName, 
                         s.LastName AS StudentLastName, 
@@ -250,6 +252,47 @@ namespace StudentExercises.Controllers
         }
 
 
+        private async Task DeleteCohort(int id)
+        {
+
+            using (SqlConnection conn = Connection)
+            {
+                await conn.OpenAsync();
+                using (SqlCommand cmd = conn.CreateCommand())
+                {
+                    cmd.CommandText = "DELETE FROM Cohort WHERE Id = @id";
+                    cmd.Parameters.Add(new SqlParameter("@id", id));
+                    int rowsAffected = await cmd.ExecuteNonQueryAsync();
+                    if (rowsAffected == 0)
+                        throw new Exception("No rows affected");
+                }
+            }
+        }
+
+
+        private async Task PutCohort(Cohort cohort)
+        {
+            using (SqlConnection conn = Connection)
+            {
+                await conn.OpenAsync();
+                using (SqlCommand cmd = conn.CreateCommand())
+                {
+                    cmd.CommandText = @"
+                            UPDATE Cohort
+                            SET [Name] = @name
+                            WHERE Id = @id
+";
+                    cmd.Parameters.AddWithValue("@name", cohort.Name);
+                    cmd.Parameters.AddWithValue("@id", cohort.Id);
+
+
+                    await cmd.ExecuteNonQueryAsync();
+
+                }
+            }
+        }
+
+
         private Student ParseStudent(SqlDataReader reader)
         {
             try
@@ -287,5 +330,24 @@ namespace StudentExercises.Controllers
                 return null;
             }
         }
+
+
+        private async Task<bool> CohortExists(int id)
+        {
+            using (SqlConnection conn = Connection)
+            {
+                await conn.OpenAsync();
+                using (SqlCommand cmd = conn.CreateCommand())
+                {
+                    cmd.CommandText = "SELECT Id FROM Cohort WHERE Id = @id";
+                    cmd.Parameters.Add(new SqlParameter("@id", id));
+
+                    SqlDataReader reader = cmd.ExecuteReader();
+
+                    return await reader.ReadAsync();
+                }
+            }
+        }
+
     }
 }
