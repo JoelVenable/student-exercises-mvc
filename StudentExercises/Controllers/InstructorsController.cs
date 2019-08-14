@@ -88,6 +88,7 @@ namespace StudentExercises.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, Instructor instructor)
         {
+            instructor.Id = id;
             try
             {
                 await PutInstructor(instructor);
@@ -175,7 +176,7 @@ namespace StudentExercises.Controllers
                     i.Id, i.FirstName, i.LastName, i.SlackHandle, i.CohortId, i.Specialty, c.[Name]
                     FROM Instructor i
                     LEFT JOIN Cohort c on i.CohortId = c.Id
-                    WHERE Id = @id";
+                    WHERE i.Id = @id";
                     cmd.Parameters.AddWithValue("@id", id);
 
                     SqlDataReader reader = cmd.ExecuteReader();
@@ -265,7 +266,7 @@ namespace StudentExercises.Controllers
                     cmd.Parameters.AddWithValue("@specialty", instructor.Specialty);
                     cmd.Parameters.AddWithValue("@cohortId", instructor.CohortId);
 
-
+                    await cmd.ExecuteNonQueryAsync();
 
                 }
             }
