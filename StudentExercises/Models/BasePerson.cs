@@ -8,7 +8,7 @@ namespace StudentExercises.Models
 {
     public class BasePerson
     {
-        [Display(Name = "Student Id")]
+        [Display(Name = "Id")]
         public int? Id { get; set; }
 
         [Required]

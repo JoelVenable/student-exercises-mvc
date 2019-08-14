@@ -128,8 +128,9 @@ namespace StudentExercises.Controllers
         // POST: Students/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(Student student)
+        public async Task<IActionResult> Edit(int id, Student student)
         {
+            student.Id = id;
             try
             {
 
@@ -139,7 +140,7 @@ namespace StudentExercises.Controllers
             }
             catch
             {
-                return View(student);
+                return RedirectToAction(nameof(Edit));
             }
         }
 
@@ -212,6 +213,8 @@ namespace StudentExercises.Controllers
                     cmd.Parameters.AddWithValue("@lastName", student.LastName);
                     cmd.Parameters.AddWithValue("@slackHandle", student.SlackHandle);
                     cmd.Parameters.AddWithValue("@cohortId", student.CohortId);
+                    cmd.Parameters.AddWithValue("@id", student.Id);
+
 
                     await cmd.ExecuteNonQueryAsync();
 
