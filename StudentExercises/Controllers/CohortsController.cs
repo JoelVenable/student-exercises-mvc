@@ -47,17 +47,17 @@ namespace StudentExercises.Controllers
         // GET: Cohorts/Create
         public ActionResult Create()
         {
-            return View();
+            return View(new Cohort());
         }
 
         // POST: Cohorts/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Create(IFormCollection collection)
+        public async Task<IActionResult> Create(Cohort cohort)
         {
             try
             {
-                // TODO: Add insert logic here
+                await PostCohort(cohort);
 
                 return RedirectToAction(nameof(Index));
             }
@@ -226,6 +226,25 @@ namespace StudentExercises.Controllers
                     reader.Close();
 
                     return cohort;
+                }
+            }
+        }
+
+        private async Task PostCohort(Cohort cohort)
+        {
+            using (SqlConnection conn = Connection)
+            {
+                await conn.OpenAsync();
+                using (SqlCommand cmd = conn.CreateCommand())
+                {
+                    cmd.CommandText = @"
+                        INSERT INTO Cohort ([Name])
+                        VALUES (@name)
+";
+                    cmd.Parameters.AddWithValue("@name", cohort.Name);
+
+                    await cmd.ExecuteNonQueryAsync();
+
                 }
             }
         }
