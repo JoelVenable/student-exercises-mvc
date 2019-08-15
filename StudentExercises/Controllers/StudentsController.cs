@@ -36,47 +36,35 @@ namespace StudentExercises.Controllers
         // GET: Students
         public async Task<IActionResult> Index()
         {
-            List<Student> students = new List<Student>();
-            using (SqlConnection conn = Connection)
-            {
-                await conn.OpenAsync();
-                using (SqlCommand cmd = conn.CreateCommand())
-                {
-                    cmd.CommandText = @"SELECT 
-                    s.Id, s.FirstName, s.LastName, s.SlackHandle, s.CohortId, c.[Name]
-                    FROM Student s
-                    LEFT JOIN Cohort c on s.CohortId = c.Id";
-
-                    SqlDataReader reader = cmd.ExecuteReader();
-
-
-                    while (await reader.ReadAsync())
-                    {
-                        students.Add(new Student()
-                        {
-                            Id = reader.GetInt32(reader.GetOrdinal("Id")),
-                            FirstName = reader.GetString(reader.GetOrdinal("FirstName")),
-                            LastName = reader.GetString(reader.GetOrdinal("LastName")),
-                            SlackHandle = reader.GetString(reader.GetOrdinal("SlackHandle")),
-                            CohortId = reader.GetInt32(reader.GetOrdinal("CohortId")),
-                            Cohort = new Cohort()
-                            {
-                                Name = reader.GetString(reader.GetOrdinal("Name"))
-                            }
-                        });
-                    }
-                    reader.Close();
-
-
-                }
-            }
-            return View(students);
+            
+            return View(await GetAllStudents());
         }
 
         // GET: Students/Details/5
         public async Task<IActionResult> Details(int id)
         {
             return View(await GetOneStudent(id));
+        }
+
+        // GET: Students/AddExercise/5
+        public async Task<IActionResult> AddExercise([FromRoute] int id)
+        {
+            var viewModel = new StudentExerciseViewModel(id);
+            List<Task> tasks = new List<Task>()
+            {
+                Task.Run(async () => viewModel.Student = await GetOneStudent(id)),
+                Task.Run(async () => viewModel.Instructors = ParseInstructors(await GetAllInstructors())),
+                Task.Run(async () => viewModel.Exercises = ParseExercises(await GetAllExercises()))
+            };
+            await Task.WhenAll(tasks);
+            return View(viewModel);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AddExercise([FromRoute] int id, StudentExercise assign)
+        {
+            return View();
         }
 
         // GET: Students/Create
@@ -277,6 +265,171 @@ namespace StudentExercises.Controllers
 
             return student;
         }
+
+        private async Task<List<Student>> GetAllStudents()
+        {
+            List<Student> students = new List<Student>();
+            using (SqlConnection conn = Connection)
+            {
+                await conn.OpenAsync();
+                using (SqlCommand cmd = conn.CreateCommand())
+                {
+                    cmd.CommandText = @"SELECT 
+                    s.Id, s.FirstName, s.LastName, s.SlackHandle, s.CohortId, c.[Name]
+                    FROM Student s
+                    LEFT JOIN Cohort c on s.CohortId = c.Id";
+
+                    SqlDataReader reader = cmd.ExecuteReader();
+
+
+                    while (await reader.ReadAsync())
+                    {
+                        students.Add(new Student()
+                        {
+                            Id = reader.GetInt32(reader.GetOrdinal("Id")),
+                            FirstName = reader.GetString(reader.GetOrdinal("FirstName")),
+                            LastName = reader.GetString(reader.GetOrdinal("LastName")),
+                            SlackHandle = reader.GetString(reader.GetOrdinal("SlackHandle")),
+                            CohortId = reader.GetInt32(reader.GetOrdinal("CohortId")),
+                            Cohort = new Cohort()
+                            {
+                                Name = reader.GetString(reader.GetOrdinal("Name"))
+                            }
+                        });
+                    }
+                    reader.Close();
+
+
+                }
+            }
+
+            return students;
+        }
+
+        private async Task<List<Instructor>> GetAllInstructors()
+        {
+            List<Instructor> instructors = new List<Instructor>();
+            using (SqlConnection conn = Connection)
+            {
+                await conn.OpenAsync();
+                using (SqlCommand cmd = conn.CreateCommand())
+                {
+                    cmd.CommandText = @"SELECT 
+                    i.Id, i.FirstName, i.LastName 
+                    FROM Instructor i";
+
+                    SqlDataReader reader = cmd.ExecuteReader();
+
+
+                    while (await reader.ReadAsync())
+                    {
+                        instructors.Add(new Instructor()
+                        {
+                            Id = reader.GetInt32(reader.GetOrdinal("Id")),
+                            FirstName = reader.GetString(reader.GetOrdinal("FirstName")),
+                            LastName = reader.GetString(reader.GetOrdinal("LastName")),
+                        });
+                    }
+                    reader.Close();
+
+
+                }
+            }
+
+            return instructors;
+        }
+
+        private List<SelectListItem> ParseInstructors(List<Instructor> instructors)
+        {
+            var options = new List<SelectListItem>();
+            options.Add(new SelectListItem()
+            {
+                Text = "Select an Instructor...",
+                Value = "0"
+            });
+
+            instructors.ForEach(i => options.Add(new SelectListItem()
+            {
+                Text = i.FullName,
+                Value = i.Id.ToString()
+            }));
+
+            return options;
+        }
+
+        private List<SelectListItem> ParseExercises(List<Exercise> exercises)
+        {
+            var options = new List<SelectListItem>();
+            options.Add(new SelectListItem()
+            {
+                Text = "Select an Exercise...",
+                Value = "0"
+            });
+
+            exercises.ForEach(i => options.Add(new SelectListItem()
+            {
+                Text = i.Name,
+                Value = i.Id.ToString()
+            }));
+
+            return options;
+        }
+
+
+        private async Task<List<Exercise>> GetAllExercises()
+        {
+            List<Exercise> exercises = new List<Exercise>();
+            using (SqlConnection conn = Connection)
+            {
+                await conn.OpenAsync();
+                using (SqlCommand cmd = conn.CreateCommand())
+                {
+                    cmd.CommandText = @"SELECT 
+                    Id, [Name], [Language] 
+                    FROM Exercise";
+
+                    SqlDataReader reader = cmd.ExecuteReader();
+
+
+                    while (await reader.ReadAsync())
+                    {
+                        exercises.Add(new Exercise()
+                        {
+                            Id = reader.GetInt32(reader.GetOrdinal("Id")),
+                            Name = reader.GetString(reader.GetOrdinal("Name")),
+                            Language = reader.GetString(reader.GetOrdinal("Language")),
+                        });
+                    }
+                    reader.Close();
+
+
+                }
+            }
+
+            return exercises;
+        }
+
+
+        private async Task PostStudentExercise(StudentExercise assignment)
+        {
+            using (SqlConnection conn = Connection)
+            {
+                await conn.OpenAsync();
+                using (SqlCommand cmd = conn.CreateCommand())
+                {
+                    cmd.CommandText = @"
+                        INSERT INTO StudentExercise (StudentId, InstructorId, ExerciseId)
+                        VALUES (@studentId, @instructorId, @exerciseId)";
+                    cmd.Parameters.AddWithValue("@studentId", assignment.StudentId);
+                    cmd.Parameters.AddWithValue("@instructorId", assignment.InstructorId);
+                    cmd.Parameters.AddWithValue("@exerciseId", assignment.ExerciseId);
+
+                    await cmd.ExecuteNonQueryAsync();
+
+                }
+            }
+        }
+
 
         private async Task DeleteStudent(int id)
         {
